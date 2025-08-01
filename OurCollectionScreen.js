@@ -361,11 +361,11 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: -width * 0.045, // Moved heart icon higher up
-    right: -width * 0.025, // Adjusted right position for better alignment
-    width: width * 0.08,
-    height: width * 0.08,
-    borderRadius: width * 0.04,
+    top: -width * 0.035, // Adjusted for better visibility across devices
+    right: width * 0.01, // Moved inside the card boundary for proper visibility
+    width: width * 0.07,
+    height: width * 0.07,
+    borderRadius: width * 0.035,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
