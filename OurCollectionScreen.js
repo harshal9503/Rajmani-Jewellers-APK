@@ -315,21 +315,21 @@ const styles = StyleSheet.create({
   },
   productsContainer: {
     flex: 1,
-    paddingHorizontal: width * 0.04, // Proper horizontal padding for balanced margins
+    paddingHorizontal: width * 0.05, // Increased padding for better edge margins
   },
   productsList: {
     paddingBottom: width * 0.04,
   },
   productRow: {
     justifyContent: 'space-between',
-    paddingHorizontal: width * 0.01, // Added padding for better spacing between products
+    paddingHorizontal: 0, // Removed extra padding to fix alignment
   },
   productCard: {
-    width: (width - width * 0.12) / 2, // Optimized width calculation for proper center alignment
+    width: (width - width * 0.14) / 2, // Adjusted width calculation for better alignment
     backgroundColor: '#fff',
     borderRadius: 8,
     marginBottom: width * 0.05,
-    marginHorizontal: width * 0.01, // Balanced horizontal margin
+    marginHorizontal: 0, // Removed horizontal margin to fix spacing
     borderWidth: 2,
     borderColor: '#B88731',
     overflow: 'visible',
