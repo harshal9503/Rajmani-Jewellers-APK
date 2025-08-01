@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   productsContainer: {
     flex: 1,
-    paddingHorizontal: width * 0.05, // Increased padding for better edge margins
+    paddingHorizontal: width * 0.02, // Reduced padding for less left and right margins
   },
   productsList: {
     paddingBottom: width * 0.04,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0, // Removed extra padding to fix alignment
   },
   productCard: {
-    width: (width - width * 0.14) / 2, // Adjusted width calculation for better alignment
+    width: (width - width * 0.08) / 2, // Optimized width calculation with reduced margins
     backgroundColor: '#fff',
     borderRadius: 8,
     marginBottom: width * 0.05,
