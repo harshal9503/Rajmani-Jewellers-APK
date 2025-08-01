@@ -361,8 +361,8 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: -width * 0.035, // Adjusted for better visibility across devices
-    right: width * 0.01, // Moved inside the card boundary for proper visibility
+    top: -width * 0.035, // Positioned to overlap the top border
+    right: -width * 0.015, // Positioned to overlap the right border
     width: width * 0.07,
     height: width * 0.07,
     borderRadius: width * 0.035,
