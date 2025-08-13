@@ -71,36 +71,38 @@ const BottomNavigator = () => {
   const [slidingText, setSlidingText] = useState('Home');
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Calculate tab positions for sliding animation
-  const getTabPosition = (tabIndex) => {
-    const tabWidth = screenWidth / 5; // 5 tabs total (including MyTijori)
-    const baseOffset = tabWidth / 2;
+  // Calculate exact tab positions for precise alignment
+  const getTabPosition = tabIndex => {
+    // More precise calculation based on actual curved bottom bar layout
+    const totalTabs = 5; // Home, Search, MyTijori, SavingsPlan, Account
+    const tabWidth = screenWidth / totalTabs;
     
     if (tabIndex < 2) {
       // Left side tabs (Home, Search)
-      return (tabIndex * tabWidth) + baseOffset;
+      return (tabIndex * tabWidth) + (tabWidth / 2);
     } else {
-      // Right side tabs (SavingsPlan, Account) - skip MyTijori position
-      return ((tabIndex + 1) * tabWidth) + baseOffset;
+      // Right side tabs (SavingsPlan, Account) - account for center circle
+      return ((tabIndex + 1) * tabWidth) + (tabWidth / 2);
     }
   };
 
   const getMyTijoriPosition = () => {
-    return screenWidth / 2; // Center position
+    // Exact center position
+    return screenWidth / 2;
   };
 
   const animateIcon = tabName => {
     Animated.sequence([
       Animated.timing(animatedScales[tabName], {
-        toValue: 1.15,
-        duration: 100,
-        easing: Easing.out(Easing.quad),
+        toValue: 1.2,
+        duration: 120,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
         useNativeDriver: true,
       }),
       Animated.timing(animatedScales[tabName], {
         toValue: 1,
-        duration: 100,
-        easing: Easing.out(Easing.quad),
+        duration: 120,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
         useNativeDriver: true,
       }),
     ]).start();
@@ -110,9 +112,9 @@ const BottomNavigator = () => {
     if (isAnimating) return;
     setIsAnimating(true);
 
-    // Determine positions
+    // Determine exact positions
     let fromPosition, toPosition;
-    
+
     if (fromTab === 'MyTijori') {
       fromPosition = getMyTijoriPosition();
     } else {
@@ -129,11 +131,11 @@ const BottomNavigator = () => {
       setSlidingText(TAB_META[toTab].label);
     }
 
-    // Calculate the distance to slide
+    // Calculate the precise distance to slide
     const slideDistance = toPosition - fromPosition;
 
-    // Reset and start animation
-    slidingTextTranslate.setValue(0);
+    // Reset and start animation with initial position
+    slidingTextTranslate.setValue(fromPosition - (screenWidth / 2));
     slidingTextOpacity.setValue(1);
     slidingTextScale.setValue(1);
 
@@ -143,25 +145,39 @@ const BottomNavigator = () => {
     });
     myTijoriOpacity.setValue(0);
 
-    // Animate the sliding text
+    // Animate the sliding text with smoother easing
     Animated.parallel([
       Animated.timing(slidingTextTranslate, {
-        toValue: slideDistance,
-        duration: 400,
-        easing: Easing.out(Easing.cubic),
+        toValue: toPosition - (screenWidth / 2),
+        duration: 500,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.sequence([
         Animated.timing(slidingTextScale, {
-          toValue: 1.1,
-          duration: 200,
-          easing: Easing.out(Easing.quad),
+          toValue: 1.15,
+          duration: 250,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
           useNativeDriver: true,
         }),
         Animated.timing(slidingTextScale, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.quad),
+          duration: 250,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(slidingTextOpacity, {
+          toValue: 0.8,
+          duration: 100,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slidingTextOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.ease,
           useNativeDriver: true,
         }),
       ]),
@@ -172,7 +188,7 @@ const BottomNavigator = () => {
       } else {
         animatedOpacity[toTab].setValue(1);
       }
-      
+
       // Reset sliding text
       slidingTextTranslate.setValue(0);
       slidingTextOpacity.setValue(0);
@@ -197,7 +213,7 @@ const BottomNavigator = () => {
             navigate('MyTijori');
           }
         }}
-        activeOpacity={0.6}>
+        activeOpacity={0.7}>
         <GoldIcon width={26} height={26} />
       </TouchableOpacity>
       <Animated.View style={{marginTop: -4, alignItems: 'center', height: 20}}>
@@ -233,7 +249,7 @@ const BottomNavigator = () => {
           }
         }}
         style={styles.tabItem}
-        activeOpacity={0.6}>
+        activeOpacity={0.7}>
         <Animated.View
           style={{
             marginTop: 2,
@@ -304,7 +320,7 @@ const BottomNavigator = () => {
           component={Account}
         />
       </CurvedBottomBar.Navigator>
-      
+
       {/* Global Sliding Text Overlay */}
       {isAnimating && (
         <Animated.View
@@ -313,7 +329,7 @@ const BottomNavigator = () => {
             {
               transform: [
                 {translateX: slidingTextTranslate},
-                {scale: slidingTextScale}
+                {scale: slidingTextScale},
               ],
               opacity: slidingTextOpacity,
             },
@@ -396,10 +412,10 @@ const styles = StyleSheet.create({
   },
   slidingTextContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 20 : 10,
+    bottom: Platform.OS === 'ios' ? 22 : 12,
     left: 0,
     right: 0,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     height: 20,
     zIndex: 1000,
@@ -409,11 +425,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#B88731',
     textAlign: 'center',
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(255, 242, 221, 0.9)',
-    borderRadius: 8,
-    paddingVertical: 2,
-    overflow: 'hidden',
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 242, 221, 0.95)',
+    borderRadius: 10,
+    paddingVertical: 3,
+    minWidth: 60,
+    shadowColor: '#B88731',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
 
