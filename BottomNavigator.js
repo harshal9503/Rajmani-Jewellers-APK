@@ -8,6 +8,7 @@ import {
   Easing,
   Platform,
   Image,
+  Dimensions,
 } from 'react-native';
 import {CurvedBottomBar} from 'react-native-curved-bottom-bar';
 
@@ -22,6 +23,8 @@ import SearchIcon from '../assets/search.svg';
 import SavingsIcon from '../assets/Savingsplannew.png';
 import UserIcon from '../assets/user.svg';
 import GoldIcon from '../assets/mdi_gold.svg';
+
+const {width: screenWidth} = Dimensions.get('window');
 
 const MyTijoriWrapper = () => (
   <View style={{flex: 1}}>
@@ -46,13 +49,16 @@ const TAB_META = {
 
 const BottomNavigator = () => {
   const animatedScales = useRef({}).current;
-  const animatedTranslate = useRef({}).current;
   const animatedOpacity = useRef({}).current;
   const tabs = Object.keys(TAB_META);
 
+  // Global sliding text animation
+  const slidingTextTranslate = useRef(new Animated.Value(0)).current;
+  const slidingTextOpacity = useRef(new Animated.Value(1)).current;
+  const slidingTextScale = useRef(new Animated.Value(1)).current;
+
   tabs.forEach(key => {
     if (!animatedScales[key]) animatedScales[key] = new Animated.Value(1);
-    if (!animatedTranslate[key]) animatedTranslate[key] = new Animated.Value(0);
     if (!animatedOpacity[key])
       animatedOpacity[key] = new Animated.Value(key === 'Home' ? 1 : 0);
   });
@@ -62,6 +68,26 @@ const BottomNavigator = () => {
 
   const [selectedTab, setSelectedTab] = useState('Home');
   const [previousTab, setPreviousTab] = useState('Home');
+  const [slidingText, setSlidingText] = useState('Home');
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Calculate tab positions for sliding animation
+  const getTabPosition = (tabIndex) => {
+    const tabWidth = screenWidth / 5; // 5 tabs total (including MyTijori)
+    const baseOffset = tabWidth / 2;
+    
+    if (tabIndex < 2) {
+      // Left side tabs (Home, Search)
+      return (tabIndex * tabWidth) + baseOffset;
+    } else {
+      // Right side tabs (SavingsPlan, Account) - skip MyTijori position
+      return ((tabIndex + 1) * tabWidth) + baseOffset;
+    }
+  };
+
+  const getMyTijoriPosition = () => {
+    return screenWidth / 2; // Center position
+  };
 
   const animateIcon = tabName => {
     Animated.sequence([
@@ -80,78 +106,83 @@ const BottomNavigator = () => {
     ]).start();
   };
 
-  const animateLabel = (tabName, direction = 'left') => {
-    const offset = direction === 'left' ? -40 : 40;
-    
-    if (tabName === 'MyTijori') {
-      myTijoriTranslate.setValue(offset);
-      myTijoriOpacity.setValue(0);
-      Animated.parallel([
-        Animated.spring(myTijoriTranslate, {
-          toValue: 0,
-          tension: 40,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(myTijoriOpacity, {
-          toValue: 1,
-          duration: 300,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Reset all other tab animations first
-      tabs.forEach(key => {
-        if (key !== tabName) {
-          animatedOpacity[key].setValue(0);
-          animatedTranslate[key].setValue(0);
-        }
-      });
+  const animateTextSliding = (fromTab, toTab) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
 
-      // Animate the selected tab
-      animatedTranslate[tabName].setValue(offset);
-      animatedOpacity[tabName].setValue(0);
-      
-      Animated.parallel([
-        Animated.spring(animatedTranslate[tabName], {
-          toValue: 0,
-          tension: 40,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedOpacity[tabName], {
-          toValue: 1,
-          duration: 300,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Determine positions
+    let fromPosition, toPosition;
+    
+    if (fromTab === 'MyTijori') {
+      fromPosition = getMyTijoriPosition();
+    } else {
+      const fromIndex = tabs.indexOf(fromTab);
+      fromPosition = getTabPosition(fromIndex);
     }
+
+    if (toTab === 'MyTijori') {
+      toPosition = getMyTijoriPosition();
+      setSlidingText('My Tijori');
+    } else {
+      const toIndex = tabs.indexOf(toTab);
+      toPosition = getTabPosition(toIndex);
+      setSlidingText(TAB_META[toTab].label);
+    }
+
+    // Calculate the distance to slide
+    const slideDistance = toPosition - fromPosition;
+
+    // Reset and start animation
+    slidingTextTranslate.setValue(0);
+    slidingTextOpacity.setValue(1);
+    slidingTextScale.setValue(1);
+
+    // Hide all tab labels during animation
+    tabs.forEach(key => {
+      animatedOpacity[key].setValue(0);
+    });
+    myTijoriOpacity.setValue(0);
+
+    // Animate the sliding text
+    Animated.parallel([
+      Animated.timing(slidingTextTranslate, {
+        toValue: slideDistance,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(slidingTextScale, {
+          toValue: 1.1,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slidingTextScale, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      // Animation complete - show the target tab label
+      if (toTab === 'MyTijori') {
+        myTijoriOpacity.setValue(1);
+      } else {
+        animatedOpacity[toTab].setValue(1);
+      }
+      
+      // Reset sliding text
+      slidingTextTranslate.setValue(0);
+      slidingTextOpacity.setValue(0);
+      setIsAnimating(false);
+    });
   };
 
   useEffect(() => {
-    if (selectedTab !== previousTab) {
-      const direction =
-        tabs.indexOf(selectedTab) > tabs.indexOf(previousTab)
-          ? 'right'
-          : 'left';
-      
-      // Handle MyTijori transitions
-      if (selectedTab === 'MyTijori' || previousTab === 'MyTijori') {
-        if (selectedTab === 'MyTijori') {
-          const newTabIndex = tabs.indexOf(previousTab);
-          const dir = newTabIndex < 2 ? 'right' : 'left';
-          animateLabel(selectedTab, dir);
-        } else {
-          const oldTabIndex = tabs.indexOf(selectedTab);
-          const dir = oldTabIndex < 2 ? 'left' : 'right';
-          animateLabel(selectedTab, dir);
-        }
-      } else {
-        animateLabel(selectedTab, direction);
-      }
-      
+    if (selectedTab !== previousTab && !isAnimating) {
+      animateTextSliding(previousTab, selectedTab);
       setPreviousTab(selectedTab);
     }
   }, [selectedTab]);
@@ -161,8 +192,10 @@ const BottomNavigator = () => {
       <TouchableOpacity
         style={styles.circleButton}
         onPress={() => {
-          setSelectedTab('MyTijori');
-          navigate('MyTijori');
+          if (!isAnimating) {
+            setSelectedTab('MyTijori');
+            navigate('MyTijori');
+          }
         }}
         activeOpacity={0.6}>
         <GoldIcon width={26} height={26} />
@@ -172,7 +205,6 @@ const BottomNavigator = () => {
           style={[
             styles.centerLabel,
             {
-              transform: [{translateX: myTijoriTranslate}],
               opacity: myTijoriOpacity,
             },
           ]}
@@ -194,9 +226,11 @@ const BottomNavigator = () => {
       <TouchableOpacity
         key={routeName}
         onPress={() => {
-          animateIcon(routeName);
-          setSelectedTab(routeName);
-          navigate(routeName);
+          if (!isAnimating) {
+            animateIcon(routeName);
+            setSelectedTab(routeName);
+            navigate(routeName);
+          }
         }}
         style={styles.tabItem}
         activeOpacity={0.6}>
@@ -216,7 +250,6 @@ const BottomNavigator = () => {
             style={[
               styles.labelWrapper,
               {
-                transform: [{translateX: animatedTranslate[routeName]}],
                 opacity: animatedOpacity[routeName],
               },
             ]}>
@@ -271,6 +304,24 @@ const BottomNavigator = () => {
           component={Account}
         />
       </CurvedBottomBar.Navigator>
+      
+      {/* Global Sliding Text Overlay */}
+      {isAnimating && (
+        <Animated.View
+          style={[
+            styles.slidingTextContainer,
+            {
+              transform: [
+                {translateX: slidingTextTranslate},
+                {scale: slidingTextScale}
+              ],
+              opacity: slidingTextOpacity,
+            },
+          ]}
+          pointerEvents="none">
+          <Text style={styles.slidingText}>{slidingText}</Text>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -342,6 +393,27 @@ const styles = StyleSheet.create({
   },
   inactiveLabel: {
     color: 'transparent',
+  },
+  slidingTextContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 20 : 10,
+    left: 0,
+    right: 0,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    height: 20,
+    zIndex: 1000,
+  },
+  slidingText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#B88731',
+    textAlign: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255, 242, 221, 0.9)',
+    borderRadius: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
 });
 
