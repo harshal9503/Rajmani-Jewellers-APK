@@ -1,5 +1,14 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import React, {useRef, useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Easing,
+  Platform,
+  Image,
+} from 'react-native';
 import {CurvedBottomBar} from 'react-native-curved-bottom-bar';
 
 import Home from './Home';
@@ -10,7 +19,7 @@ import MyTijori from './MyTijori';
 
 import HomeIcon from '../assets/home.svg';
 import SearchIcon from '../assets/search.svg';
-import OffersIcon from '../assets/saving2.svg';
+import SavingsIcon from '../assets/Savingsplannew.png';
 import UserIcon from '../assets/user.svg';
 import GoldIcon from '../assets/mdi_gold.svg';
 
@@ -21,56 +30,183 @@ const MyTijoriWrapper = () => (
 );
 
 const TAB_META = {
-  Home: {
-    icon: <HomeIcon width={24} height={24} />,
-    label: 'Home',
-  },
-  Search: {
-    icon: <SearchIcon width={24} height={24} />,
-    label: 'Search',
-  },
+  Home: {icon: HomeIcon, label: 'Home'},
+  Search: {icon: SearchIcon, label: 'Search'},
   SavingsPlan: {
-    icon: <OffersIcon width={24} height={24} />,
-    label: 'Savings',
+    icon: () => (
+      <Image
+        source={SavingsIcon}
+        style={{width: 24, height: 24, tintColor: '#B88731'}}
+      />
+    ),
+    label: 'Saving Plan',
   },
-  Account: {
-    icon: <UserIcon width={24} height={24} />,
-    label: 'Account',
-  },
+  Account: {icon: UserIcon, label: 'Account'},
 };
 
 const BottomNavigator = () => {
-  const renderCircle = ({selectedTab, navigate}) => (
+  const animatedScales = useRef({}).current;
+  const animatedTranslate = useRef({}).current;
+  const animatedOpacity = useRef({}).current;
+  const tabs = Object.keys(TAB_META);
+
+  tabs.forEach(key => {
+    if (!animatedScales[key]) animatedScales[key] = new Animated.Value(1);
+    if (!animatedTranslate[key]) animatedTranslate[key] = new Animated.Value(0);
+    if (!animatedOpacity[key])
+      animatedOpacity[key] = new Animated.Value(key === 'Home' ? 1 : 0);
+  });
+
+  const myTijoriTranslate = useRef(new Animated.Value(0)).current;
+  const myTijoriOpacity = useRef(new Animated.Value(0)).current;
+
+  const [selectedTab, setSelectedTab] = useState('Home');
+  const [previousTab, setPreviousTab] = useState('Home');
+
+  const animateIcon = (tabName: string) => {
+    Animated.sequence([
+      Animated.timing(animatedScales[tabName], {
+        toValue: 1.1,
+        duration: 70,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedScales[tabName], {
+        toValue: 1,
+        duration: 70,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const animateLabel = (tabName: string, direction: 'left' | 'right' = 'left') => {
+    const offset = direction === 'left' ? -20 : 20;
+    if (tabName === 'MyTijori') {
+      myTijoriTranslate.setValue(offset);
+      myTijoriOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(myTijoriTranslate, {
+          toValue: 0,
+          tension: 30,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(myTijoriOpacity, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset all other tab animations
+      tabs.forEach(key => {
+        if (key !== tabName) {
+          animatedTranslate[key].setValue(0);
+          animatedOpacity[key].setValue(0);
+        }
+      });
+
+      animatedTranslate[tabName].setValue(offset);
+      animatedOpacity[tabName].setValue(0);
+      Animated.parallel([
+        Animated.spring(animatedTranslate[tabName], {
+          toValue: 0,
+          tension: 30,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedOpacity[tabName], {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTab !== previousTab) {
+      const direction =
+        tabs.indexOf(selectedTab) > tabs.indexOf(previousTab)
+          ? 'right'
+          : 'left';
+      animateLabel(selectedTab, direction);
+      setPreviousTab(selectedTab);
+    }
+  }, [selectedTab, previousTab, tabs]);
+
+  const renderCircle = ({selectedTab, navigate}: {selectedTab: string, navigate: (route: string) => void}) => (
     <View style={styles.circleWrapper}>
       <TouchableOpacity
         style={styles.circleButton}
-        onPress={() => navigate('MyTijori')}
+        onPress={() => {
+          setSelectedTab('MyTijori');
+          navigate('MyTijori');
+        }}
         activeOpacity={0.7}>
-        <GoldIcon width={28} height={28} />
+        <GoldIcon width={26} height={26} />
       </TouchableOpacity>
-      <Text
-        style={[
-          styles.centerLabel,
-          {opacity: selectedTab === 'MyTijori' ? 1 : 0},
-        ]}>
-        My Tijori
-      </Text>
+      <Animated.View style={{marginTop: -4, alignItems: 'center', height: 20}}>
+        <Animated.Text
+          style={[
+            styles.centerLabel,
+            {
+              transform: [{translateX: myTijoriTranslate}],
+              opacity: myTijoriOpacity,
+            },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit>
+          {selectedTab === 'MyTijori' ? 'My Tijori' : ''}
+        </Animated.Text>
+      </Animated.View>
     </View>
   );
 
-  const renderTabBar = ({routeName, selectedTab, navigate}) => {
-    const {icon, label} = TAB_META[routeName] || {};
-    const isActive = selectedTab === routeName;
+  const renderTabBar = ({routeName, selectedTab: currentTab, navigate}: {routeName: string, selectedTab: string, navigate: (route: string) => void}) => {
+    const meta = TAB_META[routeName as keyof typeof TAB_META];
+    if (!meta) return null;
+    const IconComponent = meta.icon;
+    const isActive = currentTab === routeName;
 
     return (
       <TouchableOpacity
         key={routeName}
-        onPress={() => navigate(routeName)}
+        onPress={() => {
+          animateIcon(routeName);
+          setSelectedTab(routeName);
+          navigate(routeName);
+        }}
         style={styles.tabItem}
         activeOpacity={0.7}>
-        <View style={styles.iconWrapper}>
-          {icon}
-          {isActive && <Text style={styles.tabLabel}>{label}</Text>}
+        <Animated.View
+          style={{
+            marginTop: 2,
+            transform: [{scale: animatedScales[routeName]}],
+          }}>
+          {typeof IconComponent === 'function' ? (
+            <IconComponent />
+          ) : (
+            <IconComponent width={24} height={24} />
+          )}
+        </Animated.View>
+        <View style={{height: 18, marginTop: 5, overflow: 'hidden'}}>
+          <Animated.View
+            style={{
+              transform: [{translateX: animatedTranslate[routeName]}],
+              opacity: animatedOpacity[routeName],
+            }}>
+            <Text
+              style={[
+                styles.tabLabel,
+                isActive ? styles.activeLabel : styles.inactiveLabel,
+              ]}>
+              {meta.label}
+            </Text>
+          </Animated.View>
         </View>
       </TouchableOpacity>
     );
@@ -81,11 +217,14 @@ const BottomNavigator = () => {
       <CurvedBottomBar.Navigator
         type="UP"
         style={styles.bottomBar}
-        height={90}
-        circleWidth={60}
+        height={Platform.OS === 'ios' ? 90 : 80}
+        circleWidth={64}
         bgColor="#FFF2DD"
         initialRouteName="Home"
-        screenOptions={{headerShown: false}}
+        screenOptions={{
+          headerShown: false,
+          tabBarHideOnKeyboard: false,
+        }}
         borderTopLeftRight
         renderCircle={renderCircle}
         tabBar={renderTabBar}>
@@ -95,7 +234,11 @@ const BottomNavigator = () => {
           position="LEFT"
           component={Search}
         />
-        <CurvedBottomBar.Screen name="MyTijori" component={MyTijoriWrapper} />
+        <CurvedBottomBar.Screen
+          name="MyTijori"
+          position="CIRCLE"
+          component={MyTijoriWrapper}
+        />
         <CurvedBottomBar.Screen
           name="SavingsPlan"
           position="RIGHT"
@@ -118,50 +261,54 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   circleWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4, // less vertical gap from bottom
   },
   circleButton: {
     backgroundColor: '#B88731',
-    borderRadius: 30,
-    width: 60,
-    height: 60,
+    borderRadius: 32,
+    width: 54,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5,
+    elevation: 6,
     shadowColor: '#B88731',
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowOffset: {width: 0, height: 3},
-    shadowRadius: 5,
-    top: -13, // previously -20 → now less floating
+    shadowRadius: 4,
+    top: -16,
   },
   centerLabel: {
     fontSize: 11,
     color: '#B88731',
     fontWeight: 'bold',
-    marginTop: -2, // pulled closer to the button
+    textAlign: 'center',
+    width: 80,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 5,
     flex: 1,
-  },
-  iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 11,
-    color: '#B88731',
     fontWeight: 'bold',
-    marginTop: 1,
+    textAlign: 'center',
+  },
+  activeLabel: {
+    color: '#B88731',
+  },
+  inactiveLabel: {
+    color: 'transparent',
   },
 });
 
