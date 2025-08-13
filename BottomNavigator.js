@@ -73,21 +73,19 @@ const BottomNavigator = () => {
 
   // Calculate exact tab positions for precise alignment
   const getTabPosition = tabIndex => {
-    // More precise calculation based on actual curved bottom bar layout
     const totalTabs = 5; // Home, Search, MyTijori, SavingsPlan, Account
     const tabWidth = screenWidth / totalTabs;
-    
+
     if (tabIndex < 2) {
       // Left side tabs (Home, Search)
-      return (tabIndex * tabWidth) + (tabWidth / 2);
+      return tabIndex * tabWidth + tabWidth / 2;
     } else {
       // Right side tabs (SavingsPlan, Account) - account for center circle
-      return ((tabIndex + 1) * tabWidth) + (tabWidth / 2);
+      return (tabIndex + 1) * tabWidth + tabWidth / 2;
     }
   };
 
   const getMyTijoriPosition = () => {
-    // Exact center position
     return screenWidth / 2;
   };
 
@@ -124,20 +122,22 @@ const BottomNavigator = () => {
 
     if (toTab === 'MyTijori') {
       toPosition = getMyTijoriPosition();
-      setSlidingText('My Tijori');
     } else {
       const toIndex = tabs.indexOf(toTab);
       toPosition = getTabPosition(toIndex);
-      setSlidingText(TAB_META[toTab].label);
     }
 
-    // Calculate the precise distance to slide
-    const slideDistance = toPosition - fromPosition;
-
-    // Reset and start animation with initial position
-    slidingTextTranslate.setValue(fromPosition - (screenWidth / 2));
+    // Start with current text at current position
+    slidingTextTranslate.setValue(fromPosition - screenWidth / 2);
     slidingTextOpacity.setValue(1);
     slidingTextScale.setValue(1);
+
+    // Set the current tab text initially
+    if (fromTab === 'MyTijori') {
+      setSlidingText('My Tijori');
+    } else {
+      setSlidingText(TAB_META[fromTab].label);
+    }
 
     // Hide all tab labels during animation
     tabs.forEach(key => {
@@ -145,54 +145,71 @@ const BottomNavigator = () => {
     });
     myTijoriOpacity.setValue(0);
 
-    // Animate the sliding text with smoother easing
+    // Show sliding text
+    slidingTextOpacity.setValue(1);
+
+    // First phase: slide current text towards target (50% of the way)
+    const midPosition = fromPosition + (toPosition - fromPosition) * 0.5;
+    
     Animated.parallel([
       Animated.timing(slidingTextTranslate, {
-        toValue: toPosition - (screenWidth / 2),
-        duration: 500,
-        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+        toValue: midPosition - screenWidth / 2,
+        duration: 200,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
         useNativeDriver: true,
       }),
-      Animated.sequence([
-        Animated.timing(slidingTextScale, {
-          toValue: 1.15,
-          duration: 250,
-          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slidingTextScale, {
-          toValue: 1,
-          duration: 250,
-          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.sequence([
-        Animated.timing(slidingTextOpacity, {
-          toValue: 0.8,
-          duration: 100,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slidingTextOpacity, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(slidingTextScale, {
+        toValue: 1.15,
+        duration: 200,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slidingTextOpacity, {
+        toValue: 0.7,
+        duration: 200,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
-      // Animation complete - show the target tab label
+      // Change text to target tab text
       if (toTab === 'MyTijori') {
-        myTijoriOpacity.setValue(1);
+        setSlidingText('My Tijori');
       } else {
-        animatedOpacity[toTab].setValue(1);
+        setSlidingText(TAB_META[toTab].label);
       }
 
-      // Reset sliding text
-      slidingTextTranslate.setValue(0);
-      slidingTextOpacity.setValue(0);
-      setIsAnimating(false);
+      // Second phase: slide new text to final position
+      Animated.parallel([
+        Animated.timing(slidingTextTranslate, {
+          toValue: toPosition - screenWidth / 2,
+          duration: 300,
+          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slidingTextScale, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slidingTextOpacity, {
+          toValue: 1,
+          duration: 300,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Animation complete - show the target tab label
+        if (toTab === 'MyTijori') {
+          myTijoriOpacity.setValue(1);
+        } else {
+          animatedOpacity[toTab].setValue(1);
+        }
+
+        // Hide sliding text
+        slidingTextOpacity.setValue(0);
+        setIsAnimating(false);
+      });
     });
   };
 
@@ -322,7 +339,7 @@ const BottomNavigator = () => {
       </CurvedBottomBar.Navigator>
 
       {/* Global Sliding Text Overlay */}
-      {isAnimating && (
+      {(isAnimating || selectedTab === 'Home') && (
         <Animated.View
           style={[
             styles.slidingTextContainer,
