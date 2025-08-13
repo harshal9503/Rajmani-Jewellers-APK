@@ -148,42 +148,28 @@ const BottomNavigator = () => {
     // Show sliding text
     slidingTextOpacity.setValue(1);
 
-    // First phase: slide current text towards target (50% of the way)
-    const midPosition = fromPosition + (toPosition - fromPosition) * 0.5;
-    
-    Animated.parallel([
-      Animated.timing(slidingTextTranslate, {
-        toValue: midPosition - screenWidth / 2,
-        duration: 200,
-        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slidingTextScale, {
-        toValue: 1.15,
-        duration: 200,
-        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slidingTextOpacity, {
-        toValue: 0.7,
-        duration: 200,
-        easing: Easing.ease,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Change text to target tab text
+    // Change text after a short delay while sliding (no pause)
+    setTimeout(() => {
       if (toTab === 'MyTijori') {
         setSlidingText('My Tijori');
       } else {
         setSlidingText(TAB_META[toTab].label);
       }
+    }, 200);
 
-      // Second phase: slide new text to final position
-      Animated.parallel([
-        Animated.timing(slidingTextTranslate, {
-          toValue: toPosition - screenWidth / 2,
+    // Single continuous animation from start to end
+    Animated.parallel([
+      Animated.timing(slidingTextTranslate, {
+        toValue: toPosition - screenWidth / 2,
+        duration: 600,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(slidingTextScale, {
+          toValue: 1.1,
           duration: 300,
-          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
           useNativeDriver: true,
         }),
         Animated.timing(slidingTextScale, {
@@ -192,24 +178,32 @@ const BottomNavigator = () => {
           easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
           useNativeDriver: true,
         }),
+      ]),
+      Animated.sequence([
         Animated.timing(slidingTextOpacity, {
-          toValue: 1,
-          duration: 300,
+          toValue: 0.8,
+          duration: 150,
           easing: Easing.ease,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        // Animation complete - show the target tab label
-        if (toTab === 'MyTijori') {
-          myTijoriOpacity.setValue(1);
-        } else {
-          animatedOpacity[toTab].setValue(1);
-        }
+        Animated.timing(slidingTextOpacity, {
+          toValue: 1,
+          duration: 450,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      // Animation complete - show the target tab label
+      if (toTab === 'MyTijori') {
+        myTijoriOpacity.setValue(1);
+      } else {
+        animatedOpacity[toTab].setValue(1);
+      }
 
-        // Hide sliding text
-        slidingTextOpacity.setValue(0);
-        setIsAnimating(false);
-      });
+      // Hide sliding text
+      slidingTextOpacity.setValue(0);
+      setIsAnimating(false);
     });
   };
 
