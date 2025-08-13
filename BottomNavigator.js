@@ -54,7 +54,7 @@ const BottomNavigator = () => {
 
   // Global sliding text animation
   const slidingTextTranslate = useRef(new Animated.Value(0)).current;
-  const slidingTextOpacity = useRef(new Animated.Value(1)).current;
+  const slidingTextOpacity = useRef(new Animated.Value(0)).current;
   const slidingTextScale = useRef(new Animated.Value(1)).current;
 
   tabs.forEach(key => {
@@ -68,7 +68,7 @@ const BottomNavigator = () => {
 
   const [selectedTab, setSelectedTab] = useState('Home');
   const [previousTab, setPreviousTab] = useState('Home');
-  const [slidingText, setSlidingText] = useState('Home');
+  const [slidingText, setSlidingText] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Calculate exact tab positions for precise alignment
@@ -139,14 +139,28 @@ const BottomNavigator = () => {
       setSlidingText(TAB_META[fromTab].label);
     }
 
-    // Hide all tab labels during animation
+    // Don't hide the current tab label immediately - keep it visible until animation starts
+    // Only hide other tab labels
     tabs.forEach(key => {
-      animatedOpacity[key].setValue(0);
+      if (key !== fromTab) {
+        animatedOpacity[key].setValue(0);
+      }
     });
-    myTijoriOpacity.setValue(0);
+    if (fromTab !== 'MyTijori') {
+      myTijoriOpacity.setValue(0);
+    }
 
     // Show sliding text
     slidingTextOpacity.setValue(1);
+
+    // Hide the current tab label after a very short delay (50ms)
+    setTimeout(() => {
+      if (fromTab === 'MyTijori') {
+        myTijoriOpacity.setValue(0);
+      } else {
+        animatedOpacity[fromTab].setValue(0);
+      }
+    }, 50);
 
     // Change text after a short delay while sliding (no pause)
     setTimeout(() => {
@@ -333,7 +347,7 @@ const BottomNavigator = () => {
       </CurvedBottomBar.Navigator>
 
       {/* Global Sliding Text Overlay */}
-      {(isAnimating || selectedTab === 'Home') && (
+      {isAnimating && (
         <Animated.View
           style={[
             styles.slidingTextContainer,
