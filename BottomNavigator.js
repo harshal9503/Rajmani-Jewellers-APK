@@ -46,18 +46,15 @@ const TAB_META = {
 
 const BottomNavigator = () => {
   const animatedScales = useRef({}).current;
-  const animatedTranslateOut = useRef({}).current; // For sliding out current text
-  const animatedTranslateIn = useRef({}).current;  // For sliding in new text
-  const animatedOpacityOut = useRef({}).current;   // For fading out current text
-  const animatedOpacityIn = useRef({}).current;    // For fading in new text
+  const animatedTranslate = useRef({}).current;
+  const animatedOpacity = useRef({}).current;
   const tabs = Object.keys(TAB_META);
 
   tabs.forEach(key => {
     if (!animatedScales[key]) animatedScales[key] = new Animated.Value(1);
-    if (!animatedTranslateOut[key]) animatedTranslateOut[key] = new Animated.Value(0);
-    if (!animatedTranslateIn[key]) animatedTranslateIn[key] = new Animated.Value(0);
-    if (!animatedOpacityOut[key]) animatedOpacityOut[key] = new Animated.Value(key === 'Home' ? 1 : 0);
-    if (!animatedOpacityIn[key]) animatedOpacityIn[key] = new Animated.Value(key === 'Home' ? 1 : 0);
+    if (!animatedTranslate[key]) animatedTranslate[key] = new Animated.Value(0);
+    if (!animatedOpacity[key])
+      animatedOpacity[key] = new Animated.Value(key === 'Home' ? 1 : 0);
   });
 
   const myTijoriTranslate = useRef(new Animated.Value(0)).current;
@@ -65,117 +62,96 @@ const BottomNavigator = () => {
 
   const [selectedTab, setSelectedTab] = useState('Home');
   const [previousTab, setPreviousTab] = useState('Home');
-  const [displayedLabels, setDisplayedLabels] = useState(
-    tabs.reduce((acc, tab) => ({...acc, [tab]: tab === 'Home' ? TAB_META[tab].label : ''}), {})
-  );
 
   const animateIcon = tabName => {
     Animated.sequence([
       Animated.timing(animatedScales[tabName], {
-        toValue: 1.1,
-        duration: 70,
-        easing: Easing.linear,
+        toValue: 1.15,
+        duration: 100,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(animatedScales[tabName], {
         toValue: 1,
-        duration: 70,
-        easing: Easing.linear,
+        duration: 100,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
     ]).start();
   };
 
-  const animateLabel = (newTab, oldTab, direction = 'left') => {
-    const slideOffset = direction === 'left' ? -30 : 30;
-    const slideInOffset = direction === 'left' ? 30 : -30;
-
-    if (newTab === 'MyTijori') {
-      myTijoriTranslate.setValue(slideInOffset);
+  const animateLabel = (tabName, direction = 'left') => {
+    const offset = direction === 'left' ? -40 : 40;
+    
+    if (tabName === 'MyTijori') {
+      myTijoriTranslate.setValue(offset);
       myTijoriOpacity.setValue(0);
       Animated.parallel([
         Animated.spring(myTijoriTranslate, {
           toValue: 0,
-          tension: 30,
-          friction: 5,
+          tension: 40,
+          friction: 7,
           useNativeDriver: true,
         }),
         Animated.timing(myTijoriOpacity, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.quad),
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
-      return;
-    }
-
-    // Step 1: Slide out the old tab text
-    if (oldTab && oldTab !== newTab && oldTab !== 'MyTijori') {
-      Animated.parallel([
-        Animated.timing(animatedTranslateOut[oldTab], {
-          toValue: slideOffset,
-          duration: 150,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedOpacityOut[oldTab], {
-          toValue: 0,
-          duration: 150,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Reset old tab position and update displayed label
-        animatedTranslateOut[oldTab].setValue(0);
-        setDisplayedLabels(prev => ({...prev, [oldTab]: ''}));
+    } else {
+      // Reset all other tab animations first
+      tabs.forEach(key => {
+        if (key !== tabName) {
+          animatedOpacity[key].setValue(0);
+          animatedTranslate[key].setValue(0);
+        }
       });
-    }
 
-    // Step 2: Slide in the new tab text
-    setTimeout(() => {
-      // Update displayed label for new tab
-      setDisplayedLabels(prev => ({...prev, [newTab]: TAB_META[newTab].label}));
-      
-      // Set initial position for slide in animation
-      animatedTranslateIn[newTab].setValue(slideInOffset);
-      animatedOpacityIn[newTab].setValue(0);
+      // Animate the selected tab
+      animatedTranslate[tabName].setValue(offset);
+      animatedOpacity[tabName].setValue(0);
       
       Animated.parallel([
-        Animated.spring(animatedTranslateIn[newTab], {
+        Animated.spring(animatedTranslate[tabName], {
           toValue: 0,
-          tension: 35,
-          friction: 6,
+          tension: 40,
+          friction: 7,
           useNativeDriver: true,
         }),
-        Animated.timing(animatedOpacityIn[newTab], {
+        Animated.timing(animatedOpacity[tabName], {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.quad),
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
-    }, oldTab && oldTab !== newTab && oldTab !== 'MyTijori' ? 75 : 0);
+    }
   };
 
   useEffect(() => {
     if (selectedTab !== previousTab) {
-      const newTabIndex = tabs.indexOf(selectedTab);
-      const oldTabIndex = tabs.indexOf(previousTab);
+      const direction =
+        tabs.indexOf(selectedTab) > tabs.indexOf(previousTab)
+          ? 'right'
+          : 'left';
       
-      let direction = 'left';
+      // Handle MyTijori transitions
       if (selectedTab === 'MyTijori' || previousTab === 'MyTijori') {
-        // Handle MyTijori transitions
         if (selectedTab === 'MyTijori') {
-          direction = newTabIndex < 2 ? 'right' : 'left';
+          const newTabIndex = tabs.indexOf(previousTab);
+          const dir = newTabIndex < 2 ? 'right' : 'left';
+          animateLabel(selectedTab, dir);
         } else {
-          direction = oldTabIndex < 2 ? 'left' : 'right';
+          const oldTabIndex = tabs.indexOf(selectedTab);
+          const dir = oldTabIndex < 2 ? 'left' : 'right';
+          animateLabel(selectedTab, dir);
         }
       } else {
-        direction = newTabIndex > oldTabIndex ? 'right' : 'left';
+        animateLabel(selectedTab, direction);
       }
-
-      animateLabel(selectedTab, previousTab, direction);
+      
       setPreviousTab(selectedTab);
     }
   }, [selectedTab]);
@@ -188,7 +164,7 @@ const BottomNavigator = () => {
           setSelectedTab('MyTijori');
           navigate('MyTijori');
         }}
-        activeOpacity={0.7}>
+        activeOpacity={0.6}>
         <GoldIcon width={26} height={26} />
       </TouchableOpacity>
       <Animated.View style={{marginTop: -4, alignItems: 'center', height: 20}}>
@@ -223,7 +199,7 @@ const BottomNavigator = () => {
           navigate(routeName);
         }}
         style={styles.tabItem}
-        activeOpacity={0.7}>
+        activeOpacity={0.6}>
         <Animated.View
           style={{
             marginTop: 2,
@@ -235,14 +211,13 @@ const BottomNavigator = () => {
             <IconComponent width={24} height={24} />
           )}
         </Animated.View>
-        <View style={{height: 18, marginTop: 5, overflow: 'hidden'}}>
-          {/* Sliding out text */}
+        <View style={styles.labelContainer}>
           <Animated.View
             style={[
-              styles.textContainer,
+              styles.labelWrapper,
               {
-                transform: [{translateX: animatedTranslateOut[routeName]}],
-                opacity: animatedOpacityOut[routeName],
+                transform: [{translateX: animatedTranslate[routeName]}],
+                opacity: animatedOpacity[routeName],
               },
             ]}>
             <Text
@@ -250,26 +225,7 @@ const BottomNavigator = () => {
                 styles.tabLabel,
                 isActive ? styles.activeLabel : styles.inactiveLabel,
               ]}>
-              {displayedLabels[routeName]}
-            </Text>
-          </Animated.View>
-          
-          {/* Sliding in text */}
-          <Animated.View
-            style={[
-              styles.textContainer,
-              {
-                position: 'absolute',
-                transform: [{translateX: animatedTranslateIn[routeName]}],
-                opacity: animatedOpacityIn[routeName],
-              },
-            ]}>
-            <Text
-              style={[
-                styles.tabLabel,
-                isActive ? styles.activeLabel : styles.inactiveLabel,
-              ]}>
-              {displayedLabels[routeName]}
+              {meta.label}
             </Text>
           </Animated.View>
         </View>
@@ -364,9 +320,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
-  textContainer: {
-    width: '100%',
+  labelContainer: {
+    height: 18,
+    marginTop: 5,
+    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  labelWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 11,
