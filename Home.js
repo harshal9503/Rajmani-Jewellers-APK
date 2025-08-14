@@ -1,330 +1,268 @@
-import React, {useState, useRef} from 'react';
+// src/screens/HomeScreen/HomeScreen.js
+
+import React, {useMemo, useState, useEffect, useRef} from 'react';
 import {
+  SafeAreaView,
+  StyleSheet,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Dimensions,
   View,
   Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
+  Modal,
   TouchableOpacity,
-  SafeAreaView,
-  Platform,
-  Dimensions,
-  StatusBar,
+  Linking,
+  BackHandler,
+  ToastAndroid,
 } from 'react-native';
+import {useNavigation, useDrawerStatus} from '@react-navigation/native';
+import {GestureHandlerRootView, ScrollView} from 'react-native-gesture-handler';
+import VersionCheck from 'react-native-version-check';
 
-const {width, height} = Dimensions.get('window');
+// Components
+import Carousel from './HomeComponents/Carousel';
+import LiveGoldRate from './HomeComponents/LiveGoldRate';
+import QuickBuyCard from './HomeComponents/QuickBuyCard';
+import ShopAds from './ShopAds/ShopAds';
+import YoutubeComponent from './HomeComponents/YoutubeComponent';
+import NewArrivals from './NewArrivals/NewArrivals';
+import CertSocial from './HomeComponents/CertSocial';
+import TopStripHeader from './HomeComponents/TopStripHeader';
+import WhatsAppFloatingButton from './HomeComponents/WhatsAppButton';
 
-const Home = () => {
-  const [searchText, setSearchText] = useState('');
-  const [inputFocused, setInputFocused] = useState(false);
+const {height, width} = Dimensions.get('window');
+
+const HomeScreen = () => {
+  const navigation = useNavigation();
+  let drawerStatus = 'closed';
+  try {
+    drawerStatus = useDrawerStatus();
+  } catch (err) {}
+
+  const isDrawerOpen = useMemo(() => drawerStatus === 'open', [drawerStatus]);
+
+  const [updateVisible, setUpdateVisible] = useState(false);
+  const [exitApp, setExitApp] = useState(false);
+  const backHandlerRef = useRef();
+
+  useEffect(() => {
+    const checkAppVersion = async () => {
+      try {
+        const currentVersion = VersionCheck.getCurrentVersion();
+        console.log(`📱 Current Version: ${currentVersion}`);
+
+        const latestVersion = await VersionCheck.getLatestVersion({
+          provider: 'playStore',
+        });
+        console.log(`☁️ Latest Version from Play Store: ${latestVersion}`);
+
+        if (!latestVersion) {
+          console.log('⚠️ No Play Store version found. Skipping update popup.');
+          return;
+        }
+
+        if (latestVersion !== currentVersion) {
+          console.log('🔔 Update available! Showing popup...');
+          setUpdateVisible(true);
+        } else {
+          console.log('✅ App is up-to-date.');
+        }
+      } catch (error) {
+        console.log('❌ Version check failed:', error.message);
+      }
+    };
+
+    if (!__DEV__) {
+      checkAppVersion();
+    } else {
+      console.log('🛠 Skipping version check in development mode.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const backAction = () => {
+      if (!navigation.isFocused()) {
+        return false; // Let default behavior happen if not on HomeScreen
+      }
+
+      if (isDrawerOpen) {
+        navigation.closeDrawer();
+        return true;
+      }
+
+      if (!exitApp) {
+        setExitApp(true);
+        ToastAndroid.showWithGravity(
+          'Press again to exit the app',
+          ToastAndroid.SHORT,
+          ToastAndroid.BOTTOM,
+        );
+        const timer = setTimeout(() => {
+          setExitApp(false);
+        }, 2000);
+        return true;
+      } else {
+        BackHandler.exitApp();
+        return true;
+      }
+    };
+
+    backHandlerRef.current = backAction;
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backHandlerRef.current,
+    );
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [exitApp, isDrawerOpen, navigation]);
+
+  const handleUpdateNow = () => {
+    Linking.openURL(
+      'https://play.google.com/store/apps/details?id=com.example',
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="#fff" 
-        translucent={false}
-      />
-      
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to Home</Text>
-          <Text style={styles.subtitle}>Your digital gold journey starts here</Text>
-        </View>
+    <GestureHandlerRootView style={{flex: 1}}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="dark-content"
+        />
 
-        {/* Search Input */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={[
-              styles.searchInput,
-              inputFocused && styles.searchInputFocused
-            ]}
-            placeholder="Search gold products..."
-            placeholderTextColor="#999"
-            value={searchText}
-            onChangeText={setSearchText}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-          />
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionGrid}>
-            <TouchableOpacity style={styles.actionCard}>
-              <Text style={styles.actionTitle}>Buy Gold</Text>
-              <Text style={styles.actionSubtitle}>Start investing today</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
-              <Text style={styles.actionTitle}>Sell Gold</Text>
-              <Text style={styles.actionSubtitle}>Get best rates</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{flex: 1}}>
+            <TopStripHeader navigation={navigation} />
+            <KeyboardAvoidingView
+              style={{flex: 1}}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}>
+                <Carousel />
+                <LiveGoldRate />
+                <QuickBuyCard />
+                <ShopAds />
+                <YoutubeComponent />
+                <NewArrivals />
+                <CertSocial />
+              </ScrollView>
+            </KeyboardAvoidingView>
+            <WhatsAppFloatingButton />
+            {isDrawerOpen && <View style={styles.drawerOverlay} />}
           </View>
-        </View>
+        </TouchableWithoutFeedback>
+      </SafeAreaView>
 
-        {/* Gold Rates */}
-        <View style={styles.goldRates}>
-          <Text style={styles.sectionTitle}>Today's Gold Rates</Text>
-          <View style={styles.rateCard}>
-            <View style={styles.rateItem}>
-              <Text style={styles.rateLabel}>24K Gold</Text>
-              <Text style={styles.rateValue}>₹5,850/g</Text>
-            </View>
-            <View style={styles.rateItem}>
-              <Text style={styles.rateLabel}>22K Gold</Text>
-              <Text style={styles.rateValue}>₹5,365/g</Text>
+      <Modal visible={updateVisible} transparent animationType="fade">
+        <View style={styles.popupOverlay}>
+          <View style={[styles.popupBox, styles.popupError]}>
+            <View style={styles.popupErrorBorder} />
+            <Text style={styles.popupText}>
+              A new version is available. Please update your app.
+            </Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => setUpdateVisible(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.updateButton]}
+                onPress={handleUpdateNow}>
+                <Text style={styles.updateText}>Update Now</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-
-        {/* Portfolio Summary */}
-        <View style={styles.portfolio}>
-          <Text style={styles.sectionTitle}>Your Portfolio</Text>
-          <View style={styles.portfolioCard}>
-            <View style={styles.portfolioItem}>
-              <Text style={styles.portfolioLabel}>Total Gold</Text>
-              <Text style={styles.portfolioValue}>2.5g</Text>
-            </View>
-            <View style={styles.portfolioItem}>
-              <Text style={styles.portfolioLabel}>Current Value</Text>
-              <Text style={styles.portfolioValue}>₹14,625</Text>
-            </View>
-            <View style={styles.portfolioItem}>
-              <Text style={styles.portfolioLabel}>P&L</Text>
-              <Text style={[styles.portfolioValue, styles.profit]}>+₹1,250</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Investment Options */}
-        <View style={styles.investments}>
-          <Text style={styles.sectionTitle}>Investment Options</Text>
-          <TouchableOpacity style={styles.investmentCard}>
-            <Text style={styles.investmentTitle}>SIP Plans</Text>
-            <Text style={styles.investmentDesc}>Start with ₹100/month</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.investmentCard}>
-            <Text style={styles.investmentTitle}>One-time Purchase</Text>
-            <Text style={styles.investmentDesc}>Buy gold instantly</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Transactions */}
-        <View style={styles.transactions}>
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          <View style={styles.transactionCard}>
-            <Text style={styles.transactionTitle}>Gold Purchase</Text>
-            <Text style={styles.transactionDate}>Today, 2:30 PM</Text>
-            <Text style={styles.transactionAmount}>+0.5g</Text>
-          </View>
-          <View style={styles.transactionCard}>
-            <Text style={styles.transactionTitle}>SIP Investment</Text>
-            <Text style={styles.transactionDate}>Yesterday, 10:00 AM</Text>
-            <Text style={styles.transactionAmount}>+0.2g</Text>
-          </View>
-        </View>
-
-        {/* Add some bottom padding to ensure content is not hidden behind tab bar */}
-        <View style={styles.bottomPadding} />
-        
-      </ScrollView>
-    </SafeAreaView>
+      </Modal>
+    </GestureHandlerRootView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: {flex: 1, backgroundColor: 'white'},
+  scrollContent: {paddingBottom: height * 0.05},
+  drawerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: height,
+    width: width,
+    backgroundColor: 'rgba(0, 0, 0, 0.29)',
+    zIndex: 20,
+  },
+  popupOverlay: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#B88731',
-    marginBottom: 5,
-    fontFamily: 'Poppins-Bold',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'Poppins-Regular',
-  },
-  searchContainer: {
-    marginBottom: 30,
-  },
-  searchInput: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    backgroundColor: '#F8F8F8',
-    fontFamily: 'Poppins-Regular',
-  },
-  searchInputFocused: {
-    borderColor: '#B88731',
-    backgroundColor: '#FFF2DD',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  quickActions: {
-    marginBottom: 30,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: '#FFF2DD',
-    padding: 20,
-    borderRadius: 15,
-    marginHorizontal: 5,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#B88731',
-    marginBottom: 5,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  actionSubtitle: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    fontFamily: 'Poppins-Regular',
-  },
-  goldRates: {
-    marginBottom: 30,
-  },
-  rateCard: {
-    backgroundColor: '#F8F8F8',
+  popupBox: {
+    backgroundColor: 'white',
+    width: width * 0.8,
+    borderRadius: 12,
     padding: 20,
-    borderRadius: 15,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  rateItem: {
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
+    overflow: 'hidden',
   },
-  rateLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-    fontFamily: 'Poppins-Regular',
-  },
-  rateValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#B88731',
-    fontFamily: 'Poppins-Bold',
-  },
-  portfolio: {
-    marginBottom: 30,
-  },
-  portfolioCard: {
-    backgroundColor: '#F8F8F8',
-    padding: 20,
-    borderRadius: 15,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  portfolioItem: {
-    alignItems: 'center',
-  },
-  portfolioLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 5,
-    fontFamily: 'Poppins-Regular',
-  },
-  portfolioValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    fontFamily: 'Poppins-Bold',
-  },
-  profit: {
-    color: '#4CAF50',
-  },
-  investments: {
-    marginBottom: 30,
-  },
-  investmentCard: {
-    backgroundColor: '#FFF2DD',
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 10,
-  },
-  investmentTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#B88731',
-    marginBottom: 5,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  investmentDesc: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Poppins-Regular',
-  },
-  transactions: {
-    marginBottom: 30,
-  },
-  transactionCard: {
-    backgroundColor: '#F8F8F8',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  transactionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  popupError: {position: 'relative'},
+  popupText: {
+    fontSize: width * 0.038,
     fontFamily: 'Poppins-Medium',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  transactionDate: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'Poppins-Regular',
+  popupErrorBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#FF3B30',
   },
-  transactionAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#B88731',
-    fontFamily: 'Poppins-Bold',
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 10,
   },
-  bottomPadding: {
-    height: Platform.OS === 'ios' ? 120 : 100,
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#ccc',
+  },
+  updateButton: {
+    backgroundColor: '#B88731',
+  },
+  cancelText: {
+    color: '#000',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  updateText: {
+    color: '#fff',
+    fontFamily: 'Poppins-SemiBold',
   },
 });
 
-export default Home;
+export default HomeScreen;
