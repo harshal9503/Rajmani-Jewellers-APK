@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
   Dimensions,
+  Keyboard,
 } from 'react-native';
 import {CurvedBottomBar} from 'react-native-curved-bottom-bar';
 
@@ -57,6 +58,9 @@ const BottomNavigator = () => {
   const slidingTextOpacity = useRef(new Animated.Value(0)).current;
   const slidingTextScale = useRef(new Animated.Value(1)).current;
 
+  // Keyboard visibility state
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
   tabs.forEach(key => {
     if (!animatedScales[key]) animatedScales[key] = new Animated.Value(1);
     if (!animatedOpacity[key])
@@ -70,6 +74,27 @@ const BottomNavigator = () => {
   const [previousTab, setPreviousTab] = useState('Home');
   const [slidingText, setSlidingText] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener?.remove();
+      keyboardDidShowListener?.remove();
+    };
+  }, []);
 
   // Calculate exact tab positions for precise alignment
   const getTabPosition = tabIndex => {
@@ -307,6 +332,54 @@ const BottomNavigator = () => {
     );
   };
 
+  // Don't render tab bar when keyboard is visible
+  if (keyboardVisible) {
+    return (
+      <View style={styles.mainContainer}>
+        <CurvedBottomBar.Navigator
+          type="UP"
+          style={[styles.bottomBar, {display: 'none'}]}
+          height={0}
+          circleWidth={0}
+          bgColor="transparent"
+          initialRouteName="Home"
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: {display: 'none'},
+          }}
+          borderTopLeftRight={false}
+          renderCircle={() => null}
+          tabBar={() => null}>
+          <CurvedBottomBar.Screen 
+            name="Home" 
+            position="LEFT" 
+            component={Home}
+          />
+          <CurvedBottomBar.Screen
+            name="Search"
+            position="LEFT"
+            component={Search}
+          />
+          <CurvedBottomBar.Screen
+            name="MyTijori"
+            position="CIRCLE"
+            component={MyTijoriWrapper}
+          />
+          <CurvedBottomBar.Screen
+            name="SavingsPlan"
+            position="RIGHT"
+            component={SavingsPlan}
+          />
+          <CurvedBottomBar.Screen
+            name="Account"
+            position="RIGHT"
+            component={Account}
+          />
+        </CurvedBottomBar.Navigator>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.mainContainer}>
       <CurvedBottomBar.Navigator
@@ -318,8 +391,6 @@ const BottomNavigator = () => {
         initialRouteName="Home"
         screenOptions={{
           headerShown: false,
-          tabBarHideOnKeyboard: true,
-          keyboardHidesTabBar: true,
         }}
         borderTopLeftRight
         renderCircle={renderCircle}
@@ -328,46 +399,26 @@ const BottomNavigator = () => {
           name="Home" 
           position="LEFT" 
           component={Home}
-          options={{
-            tabBarHideOnKeyboard: true,
-            keyboardHidesTabBar: true,
-          }}
         />
         <CurvedBottomBar.Screen
           name="Search"
           position="LEFT"
           component={Search}
-          options={{
-            tabBarHideOnKeyboard: true,
-            keyboardHidesTabBar: true,
-          }}
         />
         <CurvedBottomBar.Screen
           name="MyTijori"
           position="CIRCLE"
           component={MyTijoriWrapper}
-          options={{
-            tabBarHideOnKeyboard: true,
-            keyboardHidesTabBar: true,
-          }}
         />
         <CurvedBottomBar.Screen
           name="SavingsPlan"
           position="RIGHT"
           component={SavingsPlan}
-          options={{
-            tabBarHideOnKeyboard: true,
-            keyboardHidesTabBar: true,
-          }}
         />
         <CurvedBottomBar.Screen
           name="Account"
           position="RIGHT"
           component={Account}
-          options={{
-            tabBarHideOnKeyboard: true,
-            keyboardHidesTabBar: true,
-          }}
         />
       </CurvedBottomBar.Navigator>
 
