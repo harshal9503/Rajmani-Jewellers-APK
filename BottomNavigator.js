@@ -318,31 +318,56 @@ const BottomNavigator = () => {
         initialRouteName="Home"
         screenOptions={{
           headerShown: false,
-          tabBarHideOnKeyboard: false,
+          tabBarHideOnKeyboard: true,
+          keyboardHidesTabBar: true,
         }}
         borderTopLeftRight
         renderCircle={renderCircle}
         tabBar={renderTabBar}>
-        <CurvedBottomBar.Screen name="Home" position="LEFT" component={Home} />
+        <CurvedBottomBar.Screen 
+          name="Home" 
+          position="LEFT" 
+          component={Home}
+          options={{
+            tabBarHideOnKeyboard: true,
+            keyboardHidesTabBar: true,
+          }}
+        />
         <CurvedBottomBar.Screen
           name="Search"
           position="LEFT"
           component={Search}
+          options={{
+            tabBarHideOnKeyboard: true,
+            keyboardHidesTabBar: true,
+          }}
         />
         <CurvedBottomBar.Screen
           name="MyTijori"
           position="CIRCLE"
           component={MyTijoriWrapper}
+          options={{
+            tabBarHideOnKeyboard: true,
+            keyboardHidesTabBar: true,
+          }}
         />
         <CurvedBottomBar.Screen
           name="SavingsPlan"
           position="RIGHT"
           component={SavingsPlan}
+          options={{
+            tabBarHideOnKeyboard: true,
+            keyboardHidesTabBar: true,
+          }}
         />
         <CurvedBottomBar.Screen
           name="Account"
           position="RIGHT"
           component={Account}
+          options={{
+            tabBarHideOnKeyboard: true,
+            keyboardHidesTabBar: true,
+          }}
         />
       </CurvedBottomBar.Navigator>
 
